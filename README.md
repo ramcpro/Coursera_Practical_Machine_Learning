@@ -1,13 +1,4 @@
----
-title: "Coursera_Practical_Machine_Learning_JHU"
-author: "Anyi Guo"
-date: "24/12/2018"
-output: html_document
----
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 ## Week 2
 
