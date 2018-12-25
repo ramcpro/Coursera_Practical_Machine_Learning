@@ -2,7 +2,8 @@
 title: "Coursera_Practical_Machine_Learning_JHU"
 author: "Anyi Guo"
 date: "24/12/2018"
-output: html_document
+output:
+  pdf_document: default
 ---
 This week's videos take a lot of time to go through & writing notes on.
 
@@ -55,7 +56,7 @@ sd(testCapAveS)
 
 #### Use `preProcess()` directly when building a model
 
-```{r}
+```{r,warning=FALSE}
 set.seed(1)
 model<-train(type ~.,data=training,preProcess=c("center","scale"),method="glm")
 model
@@ -144,7 +145,7 @@ quantile(capAve-capAveTruth)
     
     ```{r}
     nsv<-nearZeroVar(training,saveMetrics = TRUE)
-    nsv
+    
     ```
     * Spline basis
     `df=3` says that we want a 3rd-degree polynomial on this variable `training$age`.
@@ -154,7 +155,7 @@ quantile(capAve-capAveTruth)
     ```{r}
     library(splines)
     bsBasis<-bs(training$age,df=3)
-    bsBasis
+    #bsBasis
     ```
     #### Fitting curves with splines
     ```{r}
@@ -165,7 +166,7 @@ quantile(capAve-capAveTruth)
     #### splines on the test set.
     Note that we are using the same `bsBasis` as is created in the training dataset
     ```{r}
-    predict(bsBasis,age=testing$age)
+    p<-predict(bsBasis,age=testing$age)
     ```
 
 ### PCA (Principal Components Analysis), mostly useful for linear-type models
@@ -378,7 +379,7 @@ qplot(wage,pred,color=year,data=testing)
 ```
 
 ### If you want to use all covariates (variables)
-```{r}
+```{r,warning=FALSE}
 modFitAll<-train(wage~.,data=training,method="lm")
 pred<-predict(modFitAll,newdata=testing)
 qplot(wage,pred,data=testing)

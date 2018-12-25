@@ -1,0 +1,164 @@
+---
+title: "Week2_Quiz"
+author: "Anyi Guo"
+date: "25/12/2018"
+output:
+  pdf_document: default
+---
+
+# Week 2 Quiz
+
+## Q1: Load the Alzheimer's disease data using the commands:
+```{r}
+library(AppliedPredictiveModeling)
+data(AlzheimerDisease)
+```
+
+Which of the following commands will create non-overlapping training and test sets with about 50% of the observations assigned to each?
+
+**Answer:**
+
+```{r}
+library(caret)
+adData = data.frame(diagnosis,predictors)
+testIndex = createDataPartition(diagnosis, p = 0.50,list=FALSE)
+training = adData[-testIndex,]
+testing = adData[testIndex,]
+```
+
+## Q2: Load the cement data using the commands:
+```{r}
+library(AppliedPredictiveModeling)
+data(concrete)
+library(caret)
+set.seed(1000)
+inTrain = createDataPartition(mixtures$CompressiveStrength, p = 3/4)[[1]]
+training = mixtures[ inTrain,]
+testing = mixtures[-inTrain,]
+```
+
+Make a plot of the outcome (CompressiveStrength) versus the index of the samples. Color by each of the variables in the data set (you may find the cut2() function in the Hmisc package useful for turning continuous covariates into factors). What do you notice in these plots?
+
+ 
+```{r}
+library(Hmisc)
+# Age
+cutAge<-cut2(training$Age,g=2)
+plot(training$CompressiveStrength,col=cutAge)
+# FlyAsh
+cutFly<-cut2(training$FlyAsh,g=2)
+plot(training$CompressiveStrength,col=cutFly)
+```
+
+**Answer:** There is a non-random pattern in the plot of the outcome versus index that does not appear to be perfectly explained by any predictor suggesting a variable may be missing.
+
+## Q3: Load the cement data using the commands:
+```{r}
+library(AppliedPredictiveModeling)
+data(concrete)
+library(caret)
+set.seed(1000)
+inTrain = createDataPartition(mixtures$CompressiveStrength, p = 3/4)[[1]]
+training = mixtures[ inTrain,]
+testing = mixtures[-inTrain,]
+```
+Make a histogram and confirm the SuperPlasticizer variable is skewed. Normally you might use the log transform to try to make the data more symmetric. Why would that be a poor choice for this variable?
+```{r}
+hist(training$Superplasticizer)
+t<-log10(training$Superplasticizer)
+t
+```
+
+**Answer:** There are values of zero so when you take the log() transform those values will be -Inf.
+
+## Q4: Load the Alzheimer's disease data using the commands:
+```{r}
+library(caret)
+library(AppliedPredictiveModeling)
+set.seed(3433)
+data(AlzheimerDisease)
+adData = data.frame(diagnosis,predictors)
+inTrain = createDataPartition(adData$diagnosis, p = 3/4)[[1]]
+training = adData[ inTrain,]
+testing = adData[-inTrain,]
+```
+
+Find all the predictor variables in the training set that begin with IL. 
+```{r}
+l<-as.character(colnames(training))
+IL<-grep("^IL",l,value=TRUE)
+IL
+```
+Perform principal components on these variables with the preProcess() function from the caret package. 
+
+```{r}
+library(caret)
+preProc<-preProcess(training[,58:69],method="pca")
+pr.alz<-prcomp(training[,58:69],scale=TRUE)
+pr.alz.var<-pr.alz$sdev^2
+pve<-pr.alz.var/sum(pr.alz.var)
+plot(cumsum(pve),xlab="Principal Component",ylab="Cumulative Proportion of variance explained",type="b",ylim=c(0,1))+abline(h=0.9,col="purple")
+```
+Calculate the number of principal components needed to capture 90% of the variance. How many are there?
+
+**Answer:** 9. This is because when PC =9, the cumulative variance explained > 0.9
+
+## Q5: Load the Alzheimer's disease data using the commands:
+```{r}
+library(caret)
+library(AppliedPredictiveModeling)
+set.seed(3433)
+data(AlzheimerDisease)
+adData = data.frame(diagnosis,predictors)
+inTrain = createDataPartition(adData$diagnosis, p = 3/4)[[1]]
+training = adData[ inTrain,]
+testing = adData[-inTrain,]
+```
+
+Create a training data set consisting of only the predictors with variable names beginning with IL and the diagnosis. 
+```{r}
+training2<-training[,c(1,58:69)]
+testing2<-testing[,c(1,58:69)]
+```
+
+Build two predictive models, one using the predictors as they are and one using PCA with principal components explaining 80% of the variance in the predictors. Use method="glm" in the train function.
+
+First model: use the predictors as they are
+Accuracy for the first model (Non-PCA) is `0.6463`
+
+```{r,warning=FALSE}
+
+modFit<-train(diagnosis~.,method="glm",data=training2)
+confusionMatrix(testing$diagnosis,predict(modFit,testing))
+```
+
+Second model: use PCA. > 80% of the variance is explained when PC=7.
+Accuracy for the second model (PCA) is `0.7073`
+
+```{r}
+
+modFit2<-train(diagnosis~.,method="glm",preProcess="pca",data=training2)
+
+confusionMatrix(testing$diagnosis,predict(modFit2,testing2))
+
+
+```
+```{r,warning=FALSE}
+
+preProc<-preProcess(training2,method="pca",pcaComp=7)
+trainPC<-predict(preProc,training2)
+modelFit<-train(x=trainPC,y=training2$diagnosis,method="glm")
+testPC<-predict(preProc,testing2)
+confusionMatrix(testing$diagnosis,predict(modelFit,testPC))
+```
+
+**What is the accuracy of each method in the test set?**
+* First model: `0.6463`
+* Second model: `0.7073` 
+
+**Which is more accurate?**
+The model with PCA is more accurate. 
+
+**Exam answer:**
+* Non-PCA Accuracy: 0.65
+* PCA Accuracy: 0.72
