@@ -1,0 +1,6 @@
+---
+title: "Week2_Quiz"
+author: "Anyi Guo"
+date: "25/12/2018"
+output: html_document
+---

@@ -1,0 +1,385 @@
+---
+title: "Coursera_Practical_Machine_Learning_JHU"
+author: "Anyi Guo"
+date: "24/12/2018"
+output: html_document
+---
+This week's videos take a lot of time to go through & writing notes on.
+
+## Week 2
+
+### Preprossing data with caret
+```{r}
+library(caret)
+library(kernlab)
+data(spam)
+inTrain<-createDataPartition(y=spam$type,p=0.75,list=FALSE)
+training<-spam[inTrain,]
+testing<-spam[-inTrain,]
+hist(training$capitalAve,main="",xlab="avg. capital run length")
+```
+
+The histogram shows that the data are heavily skewed to the left. 
+
+#### Standardizing the variables (so that they have `mean = 0` and `sd=1`)
+```{r}
+trainCapAve<-training$capitalAve
+trainCapAveS<-(trainCapAve-mean(trainCapAve))/sd(trainCapAve)
+mean(trainCapAveS)
+sd(trainCapAveS)
+```
+
+#### Standardizing the test set, using mean and sd of the training set. This means that the standardized test cap will not be exactly the same as that of the training set, but they should be similar. 
+```{r}
+testCapAve<-testing$capitalAve
+testCapAveS<-(testCapAve-mean(trainCapAve))/sd(trainCapAve)
+mean(testCapAveS)
+```
+
+#### Use preprocess() function to do the standardization on the training set. The result is the same as using the above functions
+```{r}
+preObj<-preProcess(training[,-58],method=c("center","scale"))
+trainCapAveS<-predict(preObj,training[,-58])$capitalAve
+mean(trainCapAveS)
+sd(trainCapAveS)
+```
+#### Use `preProcess()` to do the same on the testing dataset. Note that `preObj` (which was created based on the training set) is also used to predict on the testing set.
+
+Note that `mean()` is not equal to 0 on the testing set, and `sd` is not equal to 1.
+
+```{r}
+testCapAveS<-predict(preObj,testing[,-58])$capitalAve
+mean(testCapAveS)
+sd(testCapAveS)
+```
+
+#### Use `preProcess()` directly when building a model
+
+```{r}
+set.seed(1)
+model<-train(type ~.,data=training,preProcess=c("center","scale"),method="glm")
+model
+```
+
+#### Standardising - Box-Cox Transforms
+
+This transforms the data into normal shape - i.e. bell shape
+```{r}
+preObj<-preProcess(training[,-58],method=c("BoxCox"))
+trainCapAveS<-predict(preObj,training[,-58])$capitalAve
+par(mfrow=c(1,2))
+hist(trainCapAveS)
+qqnorm(trainCapAveS)
+```
+
+#### Standardization: Imputing data where it is NA using `knnImpute`
+
+`knnImpute` uses the average of the k-nearest neighbours to impute the data where it's not available. 
+
+```{r}
+set.seed(1)
+
+# Make some value NAs
+training$capAve<-training$capitalAve
+selectNA<-rbinom(dim(training)[1],size=1,prob=0.05)==1
+training$capAve[selectNA]<-NA
+
+# Impute data when it's NA, and standardize
+preObj<-preProcess(training[,-58],method="knnImpute")
+capAve<-predict(preObj,training[,-58])$capAve
+
+# Standardize true values
+capAveTruth<-training$capitalAve
+capAveTruth<-(capAveTruth-mean(capAveTruth))/sd(capAveTruth)
+```
+
+Look at the difference at the imputed value (`capAve`) and the true value (`capAveTruth`), using `quantile()` function.
+
+If the values are all relatively small, then it shows that imputing data works (i.e. doesn't change the dataset too much).
+```{r}
+quantile(capAve-capAveTruth)
+```
+
+#### Some notes on preprocessing data
+
+* training and testing must be processed in the same way (i.e. use the same `preObj` in `predict()` function)
+
+
+#### Covariate/Predictor/Feature Creation
+
+1. Step 1: raw data -> features (e.g. free text -> data frame)
+   Google "Feature extraction for [data type]"
+   Examples:
+   * Text files: frequency of words, frequency of phrases, frequency of capital letters
+   * Images: Edges, corners, ridges
+   * Webpages: # and type of images, position of elements, colors, videos (e.g. A/B testing)
+   * People: Height, weight, hair color, gender etc.
+   
+2. Step 2: features -> new, useful features
+   * more useful for some models (e.g. regression, SVM) than others( e.g. decision trees)
+   * should be done **only on the training set**
+   * new features should be added to data frames
+
+3. An example of feature creation
+        ```{r}
+        library(ISLR)
+        library(caret)
+        data(Wage)
+        inTrain<-createDataPartition(y=Wage$wage,p=0.7,list=FALSE)
+        training<-Wage[inTrain,]
+        testing<-Wage[-inTrain,]
+        ```
+  * Convert factor variables to dummy variables 
+    
+    The `jobclass` column is chacracters, so we can convert it to dummy variable with `dummyVars` function
+    
+    ```{r}
+    dummies<-dummyVars(wage ~ jobclass,data=training)
+    head(predict(dummies,newdata=training))
+    ```
+    
+   * Remove features which is the same throughout the dataframe, using `nearZeroVar`
+    
+    If nsv (`nearZeroVar`) returns TRUE, then this feature is not important and thus can be removed. 
+    
+    ```{r}
+    nsv<-nearZeroVar(training,saveMetrics = TRUE)
+    nsv
+    ```
+    * Spline basis
+    `df=3` says that we want a 3rd-degree polynomial on this variable `training$age`.
+    First column means `age`
+    Second column means `age^2`
+    Third column means `age^3`
+    ```{r}
+    library(splines)
+    bsBasis<-bs(training$age,df=3)
+    bsBasis
+    ```
+    #### Fitting curves with splines
+    ```{r}
+    lm1<-lm(wage~bsBasis,data=training)
+    plot(training$age,training$wage,pch=19,cex=0.5)
+    points(training$age,predict(lm1,newdata=training),col="red",pch=19,cex=0.5)
+    ```
+    #### splines on the test set.
+    Note that we are using the same `bsBasis` as is created in the training dataset
+    ```{r}
+    predict(bsBasis,age=testing$age)
+    ```
+
+### PCA (Principal Components Analysis), mostly useful for linear-type models
+
+1. Find features which are correlated
+
+`which()` returns the list of features with correlation > 0.8
+```{r}
+library(caret)
+library(kernlab)
+data(spam)
+set.seed(1)
+inTrain<-createDataPartition(y=spam$type,p=0.75,list=FALSE)
+training<-spam[inTrain,]
+testing<-spam[-inTrain,]
+
+M<-abs(cor(training[,-58]))
+diag(M)<-0
+which(M>0.8,arr.ind=T)
+```
+  
+  Take a look at the correlated features:
+  
+```{r}
+  names(spam)[c(34,32,40)]
+  plot(spam[,34],spam[,32])
+```
+
+  Apply PCA in R: `prcomp()`
+```{r}
+smallSpam<-spam[,c(34,32)]
+prComp<-prcomp(smallSpam)
+plot(prComp$x[,1],prComp$x[,2])
+prComp$rotation
+```
+ 
+ #### PCA on spam data
+```{r}
+typeColor<-((spam$type=="spam")*1+1)
+prComp<-prcomp(log10(spam[,-58]+1))
+plot(prComp$x[,1],prComp$x[,2],col=typeColor,xlab="PC1",ylab="PC2")
+```
+
+  #### PCA with caret, preProcess()
+```{r}
+preProc<-preProcess(log10(spam[,-58]+1),method="pca",pcaComp = 2)
+spamPC<-predict(preProc,log10(spam[,-58]+1))
+plot(spamPC[,1],spamPC[,2],col=typeColor)
+```
+
+  #### Preprocessing with PCA to create model based on the training set
+```{r,warning=FALSE}
+preProc<-preProcess(log10(training[,-58]+1),method="pca",pcaComp=2)
+trainPC<-predict(preProc,log10(training[,-58]+1))
+modelFit <- train(x = trainPC, y = training$type,method="glm")
+```
+
+  #### Preprocessing with PCA to use on the testing set
+  Note that we should use the same PCA procedure (`preProc`) when using predict()
+ on the testing set
+```{r}
+testPC<-predict(preProc,log10(testing[,-58]+1))
+confusionMatrix(testing$type,predict(modelFit,testPC))
+```
+
+  Accuracy is > 0.9!
+  
+  #### Alternative: preProcess with PCA during the training process (instead of doing PCA first, then do the training)
+  
+```{r,warning=FALSE}
+modelFit <- train(x = trainPC, y = training$type,method="glm",preProcess="pca")
+confusionMatrix(testing$type,predict(modelFit,testPC))
+```
+
+### Predicting with Regression
+
+Use the fainthful eruption data in caret
+```{r}
+library(caret)
+data(faithful)
+set.seed(333)
+inTrain<-createDataPartition(y=faithful$waiting,p=0.5,list=FALSE)
+trainFaith<-faithful[inTrain,]
+testFaith<-faithful[-inTrain,]
+head(trainFaith)
+```
+
+#### Plot eruption duration vs. waiting time.
+You can see that there's a roughly linear relationship between the two variables. 
+```{r}
+plot(trainFaith$waiting,trainFaith$eruptions,pch=19,col="blue",xlab="waiting",ylab="eruption duration")
+```
+
+#### Fit a linear regression model
+```{r}
+lm1<-lm(eruptions~waiting,data=trainFaith)
+summary(lm1)
+```
+
+#### Plot the model fit
+```{r}
+plot(trainFaith$waiting,trainFaith$eruptions,pch=19,col="blue",xlab="waiting",ylab="eruption duration")
+lines(trainFaith$waiting,lm1$fitted,lwd=3)
+```
+
+#### Predicting a new value with the linear regression model
+When `waiting time = 80`
+```{r}
+newdata<-data.frame(waiting=80)
+predict(lm1,newdata)
+```
+
+#### Plot predictions - training vs testing set
+```{r}
+par(mfrow=c(1,2))
+# training
+plot(trainFaith$waiting,trainFaith$eruptions,pch=19,col="blue",main="training",xlab="waiting",ylab="eruption duration")
+lines(trainFaith$waiting,predict(lm1),lwd=3)
+# testing
+plot(testFaith$waiting,testFaith$eruptions,pch=19,col="blue",main="testing",xlab="waiting",ylab="eruption duration")
+lines(testFaith$waiting,predict(lm1,newdata=testFaith),lwd=3)
+
+```
+
+#### Get training & testing errors
+```{r}
+# RMSE on training
+sqrt(sum((lm1$fitted-trainFaith$eruptions)^2))
+# RMSE on testing
+sqrt(sum((predict(lm1,newdata=testFaith)-testFaith$eruptions)^2))
+```
+
+#### Prediction intervals
+```{r}
+pred1<-predict(lm1,newdata=testFaith,interval="prediction")
+ord<-order(testFaith$waiting)
+plot(testFaith$waiting,testFaith$eruptions,pch=19,col="blue")
+matlines(testFaith$waiting[ord],pred1[ord,],type="l",col=c(1,2,2),lty=c(1,1,1),lwd=3)
+```
+
+#### Same process with caret
+```{r}
+modFit<-train(eruptions~waiting,data=trainFaith,method="lm")
+summary(modFit$finalModel)
+```
+
+## Predicting with regression, multiple covariates
+Use the wages dataset in ISLR package
+```{r}
+library(ISLR)
+library(ggplot2)
+library(caret)
+data(Wage)
+Wage<-subset(Wage,select=-c(logwage))
+summary(Wage)
+
+inTrain<-createDataPartition(y=Wage$wage,p=0.7,list=FALSE)
+training<-Wage[inTrain,]
+testing<-Wage[-inTrain,]
+dim(training)
+dim(testing)
+```
+
+#### Feature plot on the wages dataset
+```{r}
+featurePlot(x=training[,c("age","education","jobclass")],y=training$wage,plot="pairs")
+```
+
+#### Plot age vs. wage
+```{r}
+qplot(age,wage,data=training)
+```
+
+#### Plot age vs wage, color by jobclass
+We can see that the outliners are mostly for people in informational jobclass
+```{r}
+qplot(age,wage,color=jobclass,data=training)
+```
+
+#### Plot age vs. wage, color by education
+You can see that the outliners are mostly advance degree education
+```{r}
+qplot(age,wage,color=education,data=training)
+```
+
+#### Fit a linear model
+```{r}
+modFit<-train(wage~age+jobclass+education,method="lm",data=training)
+finMod<-modFit$finalModel
+print(modFit)
+
+plot(finMod,1,pch=19,cex=0.5,col="#00000010")
+```
+
+
+#### Color by variables not used in the model
+```{r}
+qplot(finMod$fitted,finMod$residuals,color=race,data=training)
+```
+
+#### Plot by index (i.e. which rows in the dataframe they are at)
+```{r}
+plot(finMod$residuals,pch=19)
+```
+
+#### Predicted vs. truth in test set
+```{r}
+pred<-predict(modFit,testing)
+qplot(wage,pred,color=year,data=testing)
+```
+
+### If you want to use all covariates (variables)
+```{r}
+modFitAll<-train(wage~.,data=training,method="lm")
+pred<-predict(modFitAll,newdata=testing)
+qplot(wage,pred,data=testing)
+```

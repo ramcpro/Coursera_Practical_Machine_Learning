@@ -1,6 +1,27 @@
+# Practical Machine Learning
+## Course 8 in the [Data Science Specialization by John Hopkins University](https://www.coursera.org/specializations/jhu-data-science)
+1. The Data Scientist's Toolbox
+2. R Programming
+3. Getting and Cleaning Data
+4. Exploratory Data Analysis
+5. Reproducible Research
+6. Statistical Inference
+7. Regression Models
+8. [Practical Machine Learning](https://github.com/yanniey/Coursera_Practical_Machine_Learning)
+9. Developing Data Products
+10. Data Science Capstone
+
+* [Week1]()
+* [Week2]()
+* [Week3]()
+* [Week4]()
+
+## Week 1
 
 
 ## Week 2
+This week's videos take a lot of time to go through & writing notes on.
+
 
 ### Preprossing data with caret
 ```{r}
@@ -162,7 +183,8 @@ quantile(capAve-capAveTruth)
     predict(bsBasis,age=testing$age)
     ```
 
-### PCA (Principal Components Analysis)
+### PCA (Principal Components Analysis), mostly useful for linear-type models
+
 1. Find features which are correlated
 
 `which()` returns the list of features with correlation > 0.8
@@ -208,3 +230,175 @@ preProc<-preProcess(log10(spam[,-58]+1),method="pca",pcaComp = 2)
 spamPC<-predict(preProc,log10(spam[,-58]+1))
 plot(spamPC[,1],spamPC[,2],col=typeColor)
 ```
+
+  #### Preprocessing with PCA to create model based on the training set
+```{r,warning=FALSE}
+preProc<-preProcess(log10(training[,-58]+1),method="pca",pcaComp=2)
+trainPC<-predict(preProc,log10(training[,-58]+1))
+modelFit <- train(x = trainPC, y = training$type,method="glm")
+```
+
+  #### Preprocessing with PCA to use on the testing set
+  Note that we should use the same PCA procedure (`preProc`) when using predict()
+ on the testing set
+```{r}
+testPC<-predict(preProc,log10(testing[,-58]+1))
+confusionMatrix(testing$type,predict(modelFit,testPC))
+```
+
+  Accuracy is > 0.9!
+  
+  #### Alternative: preProcess with PCA during the training process (instead of doing PCA first, then do the training)
+  
+```{r,warning=FALSE}
+modelFit <- train(x = trainPC, y = training$type,method="glm",preProcess="pca")
+confusionMatrix(testing$type,predict(modelFit,testPC))
+```
+
+### Predicting with Regression
+
+Use the fainthful eruption data in caret
+```{r}
+library(caret)
+data(faithful)
+set.seed(333)
+inTrain<-createDataPartition(y=faithful$waiting,p=0.5,list=FALSE)
+trainFaith<-faithful[inTrain,]
+testFaith<-faithful[-inTrain,]
+head(trainFaith)
+```
+
+#### Plot eruption duration vs. waiting time.
+You can see that there's a roughly linear relationship between the two variables. 
+```{r}
+plot(trainFaith$waiting,trainFaith$eruptions,pch=19,col="blue",xlab="waiting",ylab="eruption duration")
+```
+
+#### Fit a linear regression model
+```{r}
+lm1<-lm(eruptions~waiting,data=trainFaith)
+summary(lm1)
+```
+
+#### Plot the model fit
+```{r}
+plot(trainFaith$waiting,trainFaith$eruptions,pch=19,col="blue",xlab="waiting",ylab="eruption duration")
+lines(trainFaith$waiting,lm1$fitted,lwd=3)
+```
+
+#### Predicting a new value with the linear regression model
+When `waiting time = 80`
+```{r}
+newdata<-data.frame(waiting=80)
+predict(lm1,newdata)
+```
+
+#### Plot predictions - training vs testing set
+```{r}
+par(mfrow=c(1,2))
+# training
+plot(trainFaith$waiting,trainFaith$eruptions,pch=19,col="blue",main="training",xlab="waiting",ylab="eruption duration")
+lines(trainFaith$waiting,predict(lm1),lwd=3)
+# testing
+plot(testFaith$waiting,testFaith$eruptions,pch=19,col="blue",main="testing",xlab="waiting",ylab="eruption duration")
+lines(testFaith$waiting,predict(lm1,newdata=testFaith),lwd=3)
+
+```
+
+#### Get training & testing errors
+```{r}
+# RMSE on training
+sqrt(sum((lm1$fitted-trainFaith$eruptions)^2))
+# RMSE on testing
+sqrt(sum((predict(lm1,newdata=testFaith)-testFaith$eruptions)^2))
+```
+
+#### Prediction intervals
+```{r}
+pred1<-predict(lm1,newdata=testFaith,interval="prediction")
+ord<-order(testFaith$waiting)
+plot(testFaith$waiting,testFaith$eruptions,pch=19,col="blue")
+matlines(testFaith$waiting[ord],pred1[ord,],type="l",col=c(1,2,2),lty=c(1,1,1),lwd=3)
+```
+
+#### Same process with caret
+```{r}
+modFit<-train(eruptions~waiting,data=trainFaith,method="lm")
+summary(modFit$finalModel)
+```
+
+## Predicting with regression, multiple covariates
+Use the wages dataset in ISLR package
+```{r}
+library(ISLR)
+library(ggplot2)
+library(caret)
+data(Wage)
+Wage<-subset(Wage,select=-c(logwage))
+summary(Wage)
+
+inTrain<-createDataPartition(y=Wage$wage,p=0.7,list=FALSE)
+training<-Wage[inTrain,]
+testing<-Wage[-inTrain,]
+dim(training)
+dim(testing)
+```
+
+#### Feature plot on the wages dataset
+```{r}
+featurePlot(x=training[,c("age","education","jobclass")],y=training$wage,plot="pairs")
+```
+
+#### Plot age vs. wage
+```{r}
+qplot(age,wage,data=training)
+```
+
+#### Plot age vs wage, color by jobclass
+We can see that the outliners are mostly for people in informational jobclass
+```{r}
+qplot(age,wage,color=jobclass,data=training)
+```
+
+#### Plot age vs. wage, color by education
+You can see that the outliners are mostly advance degree education
+```{r}
+qplot(age,wage,color=education,data=training)
+```
+
+#### Fit a linear model
+```{r}
+modFit<-train(wage~age+jobclass+education,method="lm",data=training)
+finMod<-modFit$finalModel
+print(modFit)
+
+plot(finMod,1,pch=19,cex=0.5,col="#00000010")
+```
+
+
+#### Color by variables not used in the model
+```{r}
+qplot(finMod$fitted,finMod$residuals,color=race,data=training)
+```
+
+#### Plot by index (i.e. which rows in the dataframe they are at)
+```{r}
+plot(finMod$residuals,pch=19)
+```
+
+#### Predicted vs. truth in test set
+```{r}
+pred<-predict(modFit,testing)
+qplot(wage,pred,color=year,data=testing)
+```
+
+### If you want to use all covariates (variables)
+```{r}
+modFitAll<-train(wage~.,data=training,method="lm")
+pred<-predict(modFitAll,newdata=testing)
+qplot(wage,pred,data=testing)
+```
+
+
+## Week 3
+## Week 4
