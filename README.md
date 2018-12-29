@@ -11,17 +11,34 @@
 9. Developing Data Products
 10. Data Science Capstone
 
-* [Week1]()
-* [Week2]()
-* [Week3]()
-* [Week4]()
 
 ## Week 1
-
+* In and out of sample errors
+* Cross Validation
 
 ## Week 2
-This week's videos take a lot of time to go through & writing notes on.
+(This week's videos take a lot of time to go through & writing notes on.)
 
+* Caret package
+* Principal Component Analysis (PCA)
+* Regression with multiple features
+* Plotting
+
+## Week 3
+* Decision trees and random forest
+* Bagging
+* Boosting
+
+## Week 4
+* Regular Expression
+* Unsupervised Prediction
+* Combining predictors
+* Forecasting
+
+--------------
+
+
+## Week 2 Notes
 
 ### Preprossing data with caret
 ```{r}
