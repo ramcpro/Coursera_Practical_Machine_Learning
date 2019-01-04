@@ -11,6 +11,7 @@
 9. Developing Data Products
 10. Data Science Capstone
 
+-----------------
 
 ## Week 1
 * In and out of sample errors
@@ -418,4 +419,238 @@ qplot(wage,pred,data=testing)
 
 
 ## Week 3
+
+## Regression with Trees
+Pros: better interpretability, better performance for non-linear settings
+
+Stop splitting when the leaves are pure 
+### Measures of impurity
+1. Misclassification Error:
+  * 0 = perfect purity
+  * 0.5 = no purity
+
+2. Gini index:
+  * 0 = perfect purity
+  * 0.5 = no purity
+
+3. Deviance/information gain:
+  * 0 = perfect purity
+  * 1 = no purity
+  
+Example: Iris Data
+```{r, warning=FALSE}
+data(iris)
+library(ggplot2)
+library(caret)
+names(iris)
+table(iris$Species)
+
+inTrain<-createDataPartition(y=iris$Species,p=0.7,list=FALSE)
+training<-iris[inTrain,]
+testing<-iris[-inTrain,]
+
+# plot the Iris petal widths/species
+qplot(Petal.Width,Sepal.Width,col=Species, data=training)
+```
+Train the model
+```{r}
+#rpart is R's package for doing regressions
+modFit<-train(Species~.,method="rpart",data=training)
+print(modFit$finalModel)
+
+# plot tree
+plot(modFit$finalModel,uniform=TRUE,main="Classification Tree")
+text(modFit$finalModel,use.n=TRUE,all=TRUE,cex=0.8)
+```
+Use the rattle package to make the trees look better
+```{r}
+library(rattle)
+fancyRpartPlot(modFit$finalModel)
+```
+
+Predict new values
+```{r}
+predict(modFit,newdata=testing)
+```
+
+Notes:
+Classification trees are non-linear models
+* They use interaction between variables
+* Tree can also be used for regression problems (i.e. continuous outcome)
+
+## Bagging (Bootstrap aggregating)
+What is bagging?
+1. Resample cases and recalculate predictions
+2. Average or majority vote
+3. It produces similar bias, but reduces variance.
+4. Bagging is more useful for non-linear functions
+
+Example with the Ozone data from ElemStatLearn package
+```{r}
+library(ElemStatLearn)
+data(ozone,package="ElemStatLearn")
+ozone<-ozone[order(ozone$ozone),]
+```
+
+We'll predict temperature based on zone
+
+### Bagged loess
+```{r}
+ll<-matrix(NA,nrow=10,ncol=155)
+
+#we'll resample the data 10 times (loop 10 times)
+for(i in 1:10){
+        # each time we'll resample with replacement
+        ss<-sample(1:dim(ozone)[1],replace=T)
+        # ozone0 is the resampled subset. We'll also reorder the resampled subset with ozone
+        ozone0<-ozone[ss,];ozone0<-ozone0[order(ozone0$ozone),]
+        # we'll fit a loess line through the resampled subset. span determins how smooth this line would be 
+        loess0<-loess(temperature~ozone,data=ozone0,span=0.2)
+        # for each of the loess curve, we'll predict the outcome for the 155 rows in the original dataset
+        ll[i,]<-predict(loess0,newdata=data.frame(ozone=1:155))
+}
+```
+
+### Bagged loess
+The red line is the bagged (average) line across the 10 resamples
+```{r}
+plot(ozone$ozone,ozone$temperature,pch=19,cex=0.5)
+for(i in 1:10){lines(1:155,ll[i,],col="grey",lwd=2)}
+lines(1:155,apply(ll,2,mean),col="red",lwd=2)
+```
+
+Notes: 
+* Bagging is most useful for non-linear models
+* Often used with trees & random forests
+
+## Random Forests
+What is random forests?
+1. Bootstrap samples
+2. At each split, bootstrap variables
+3. Grow multiple trees and vote
+
+**Pros:**
+1. Accuracy
+
+**Cons:**
+1. Speed
+2. Interpretability
+3. Overfitting
+
+Random Forest on Iris data
+```{r}
+data(iris)
+library(ggplot2)
+library(caret)
+inTrain<-createDataPartition(y=iris$Species,p=0.7,list=FALSE)
+training<-iris[inTrain,]
+testing<-iris[-inTrain,]
+
+# build random forest model using caret
+modFit<-train(Species~.,model="rf",prox=TRUE,data=training)
+```
+
+### Getting a single tree
+```{r}
+library(randomForest)
+getTree(modFit$finalModel,k=2)
+```
+
+### Class "centers"
+```{r}
+irisP<-classCenter(training[,c(3,4)],training$Species,modFit$finalModel$prox)
+irisP<-as.data.frame(irisP)
+irisP$Species<-rownames(irisP)
+p<-qplot(Petal.Width,Petal.Length,col=Species,data=training)
+
+# This line plots the three centers
+p+geom_point(aes(x=Petal.Width,y=Petal.Length,col=Species),size=5,shape=4,data=irisP)
+```
+
+### Predicting new values
+```{r}
+pred<-predict(modFit,testing)
+testing$preRight<-pred==testing$Species
+table(pred,testing$Species)
+qplot(Petal.Width,Petal.Length,col=preRight,data=testing,main="newdata Predictions")
+```
+
+## Boosting
+Boosting and random forest are two of the most accurate out of the box classifiers for prediction analysis.
+
+### What is boosting?
+1. Take lots of (possibly) weak predictors
+2. Weight them and add them up
+3. Get a strong predictor
+
+### Wage example for boosting
+```{r}
+library(ISLR)
+data(Wage)
+library(ggplot2)
+library(caret)
+
+Wage<-subset(Wage,select=-c(logwage))
+set.seed(1)
+inTrain<-createDataPartition(y=Wage$wage,p=0.7,list=FALSE)
+training<-Wage[inTrain,]
+testing<-Wage[-inTrain,]
+```
+
+### Fit the boosting model
+`gbm` is boosting for tree models.
+
+```{r,warning=FALSE}
+modFit<-train(wage~.,data=training,method="gbm",verbose=FALSE)
+qplot(predict(modFit,testing),wage,data=testing)
+```
+
+## Model based prediction
+
+### What is model based prediction?
+1. Assume the data follow a probabilistic model
+2. Use Bayes' theorem to identify optimal classifiers
+
+### Pros
+1. Take advantage of data structures
+2. Computationally convenient
+3. Reasonably accurate
+
+### Cons
+1. Make additional assumptions about data
+2. When model is incorrect, it may reduce accuracy
+
+**Naive Bayes** assumes that all features are independent of each other - useful for binary or categorical data, e.g. text classification
+
+Model based prediction with Iris data
+```{r}
+data(iris)
+library(ggplot2)
+library(caret)
+
+set.seed(2)
+inTrain<-createDataPartition(y=iris$Species,p=0.7,list=FALSE)
+training<-iris[inTrain,]
+testing<-iris[-inTrain,]
+```
+
+### Build predictions
+* `lda` = linear discriminant analysis
+* `nb` = Naive Bayes
+
+```{r,warning=FALSE}
+modlda<-train(Species~.,data=training,method="lda")
+modnb<-train(Species~.,data=training,method="nb")
+plda<-predict(modlda,testing)
+pnb<-predict(modnb,testing)
+table(plda,pnb)
+```
+
+```{r}
+equalPredictions =(plda==pnb)
+qplot(Petal.Width,Sepal.Width,col=equalPredictions,data=testing)
+```
+
+
+
 ## Week 4

@@ -1,0 +1,33 @@
+---
+title: "Week 4 - Practical Machine Learning"
+author: "Anyi Guo"
+date: "30/12/2018"
+output: pdf_document
+---
+
+# Week 4
+## Regularized regression
+### What is regularised regression?
+1. Fit a regression model
+2. Penalize (or shrink) large coefficients
+
+**Pros**
+1. Help with bias/variance tradeoff
+2. Help with model selection
+
+**Cons**
+1. Computationally demanding
+2. Lower performance than random forests and boosting 
+
+
+Prediction error = irreducible error + bias^2 + variance
+
+**Tuning parameter lambda**
+1. lambda controls the size of the coefficients, and the amount of regularization 
+2. As lambda approaches 0, we obtain the least squared solution (i.e. what we get from the standard linear model)
+3. As lambda approaches infinity, the coefficients go towards 0
+
+In `caret` methods for penalised regularization models are:
++ ridge
++ lasso
++ relaxo
