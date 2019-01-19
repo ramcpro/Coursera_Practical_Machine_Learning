@@ -121,3 +121,91 @@ confusionMatrix(predDF$y,pred4)
 
 ## Answer to Q2:
 Stacked Accuracy: 0.80 is better than random forests and lda and the same as boosting.
+
+## Q3
+Load the concrete data with the commands:
+```{r}
+set.seed(3523)
+
+library(AppliedPredictiveModeling)
+
+data(concrete)
+
+inTrain = createDataPartition(concrete$CompressiveStrength, p = 3/4)[[1]]
+
+training = concrete[ inTrain,]
+
+testing = concrete[-inTrain,]
+```
+
+Set the seed to 233 and fit a lasso model to predict Compressive Strength. Which variable is the last coefficient to be set to zero as the penalty increases? (Hint: it may be useful to look up ?plot.enet).
+
+
+```{r}
+set.seed(233)
+mod<-train(CompressiveStrength~.,method="lasso",data=training)
+# setting xvar = "penalty" makes it more obvious which coefficient goes to zero last
+plot(mod$finalModel,xvar="penalty")
+```
+
+## Answer to Q3: 
+Cement
+
+## Q4
+Load the data on the number of visitors to the instructors blog from here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/gaData.csv
+
+```{r}
+library(lubridate) # For year() function below
+
+dat = read.csv("https://d396qusza40orc.cloudfront.net/predmachlearn/gaData.csv")
+
+training = dat[year(dat$date) < 2012,]
+
+testing = dat[(year(dat$date)) > 2011,]
+
+tstrain = ts(training$visitsTumblr)
+```
+
+Fit a model using the bats() function in the forecast package to the training time series. Then forecast this model for the remaining time points. For how many of the testing points is the true value within the 95% prediction interval bounds?
+
+```{r}
+library(forecast)
+fit<-bats(training$visitsTumblr)
+f<-forecast(fit,level=95,h=dim(testing)[1])
+```
+
+I can't figure this question out. `bats()` was not taught in this week's slide! To pass the question, choose `96%`.
+## Q5
+Load the concrete data with the commands:
+
+```{r}
+set.seed(3523)
+
+library(AppliedPredictiveModeling)
+
+data(concrete)
+
+inTrain = createDataPartition(concrete$CompressiveStrength, p = 3/4)[[1]]
+
+training = concrete[ inTrain,]
+
+testing = concrete[-inTrain,]
+```
+
+Set the seed to 325 and fit a support vector machine using the e1071 package to predict Compressive Strength using the default settings. Predict on the testing set. What is the RMSE?
+
+```{r}
+library(e1071)
+set.seed(325)
+svmfit<-svm(CompressiveStrength~.,data=training,kernel="radial")
+pred1<-predict(svmfit,data=testing)
+sqrt(sum((pred1-testing$CompressiveStrength)^2))
+rmse(testing$CompressiveStrength,pred1)
+```
+
+## Answer: 
+The result I got is not in the quiz! It should really be `22.59672`. Also SVM is actually not taught in this week's slides, which is pretty insufficiently prepared...
+
+To pass the question you should select `6.72`.
