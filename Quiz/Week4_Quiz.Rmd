@@ -198,6 +198,7 @@ Set the seed to 325 and fit a support vector machine using the e1071 package to 
 
 ```{r}
 library(e1071)
+library(Metrics)
 set.seed(325)
 svmfit<-svm(CompressiveStrength~.,data=training,kernel="radial")
 pred1<-predict(svmfit,data=testing)

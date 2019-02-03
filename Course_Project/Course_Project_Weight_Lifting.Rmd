@@ -1,0 +1,41 @@
+---
+title: "Course Project - Weight Lifting Exercises"
+author: "Anyi Guo"
+date: "03/02/2019"
+output: pdf_document
+---
+
+# Machine Learning Course Project - Predict how well weight lifting is done 
+## Coursera course: Practical Machine Learning
+
+
+```{r}
+library(readr)
+training <- read_csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv")
+testing <-read_csv("https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv")
+```
+
+Step 1: Clean data
+
+* In training and testing set, remove columns which are all NA (since we cannot get any prediction value from them)
+```{r}
+library(dplyr)
+not_all_na <- function(x) any(!is.na(x))
+not_any_na<-function(x) all(!is.na(x))
+testing2<- testing %>% select_if(not_all_na)
+testing3<-testing %>% select_if(not_any_na)
+
+# Keep the same columns in the training set
+training2<- training %>% select(colnames(testing))
+```
+
+* Remove columns which are mostly empty (mostly = >90%)
+```{r}
+empty_cols <- training %>% summarize_all(funs(sum(is.na(.))/length(.)))
+empty_cols<- empty_cols[which(empty_cols[,1]>0.9),]
+training<-select(training,-colnames(list))
+```
+Step 2: find out which variables matter
+
+Step 3: build model
+Step 4: predict for testing set

@@ -13,6 +13,19 @@
 
 -----------------
 
+## Overall score: 5/10
+
+## Pros:
+1. Useful for learning about concepts & models
+
+2. Course project provides a good opportunity for hands-on practice.
+
+## Cons:
+1. Slides were insufficiently prepared, some of models used for the quiz questions are not taught in the slides (e.g. SVM, bats() forecast)
+
+2. No hyperlinks in the PDF slides! Students cannot access the additional information the lecturer provides. 
+
+
 ## Week 1
 * In and out of sample errors
 * Cross Validation
