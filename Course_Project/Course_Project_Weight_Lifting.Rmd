@@ -20,22 +20,69 @@ Step 1: Clean data
 * In training and testing set, remove columns which are all NA (since we cannot get any prediction value from them)
 ```{r}
 library(dplyr)
-not_all_na <- function(x) any(!is.na(x))
-not_any_na<-function(x) all(!is.na(x))
-testing2<- testing %>% select_if(not_all_na)
-testing3<-testing %>% select_if(not_any_na)
-
-# Keep the same columns in the training set
-training2<- training %>% select(colnames(testing))
+#keep the same columns in training & testing set
+testing2<-testing[,colSums(is.na(testing))<nrow(testing)]
+li<-c(colnames(testing2)[1:59],"classe")
+training2<-training %>% select(li)
 ```
 
-* Remove columns which are mostly empty (mostly = >90%)
+Find columns which contain missing values
 ```{r}
-empty_cols <- training %>% summarize_all(funs(sum(is.na(.))/length(.)))
-empty_cols<- empty_cols[which(empty_cols[,1]>0.9),]
-training<-select(training,-colnames(list))
+colnames(training2)[colSums(is.na(training2))>0]
 ```
-Step 2: find out which variables matter
+Find how many NAs are in these columns
+```{r}
+sum(is.na(training2$magnet_dumbbell_z))
+sum(is.na(training2$magnet_forearm_y))
+sum(is.na(training2$magnet_forearm_z))
+```
 
-Step 3: build model
-Step 4: predict for testing set
+Find row index for the NA rows
+```{r}
+which(is.na(training2),arr.ind=TRUE)
+```
+It seems that there is only one row in the training set that contains NA (row 5373). We can handle it in two ways:
+1. Replace it with column mean
+2. Drop this row
+
+Considering the size of the training dataset, I'll use #2 and drop this row. 
+```{r}
+training2<-training2[-c(5373),]
+```
+
+Find out data type for each column, and only select numeric columns to build the model
+```{r}
+numeric<-lapply(training2,is.numeric)
+numeric$classe<-TRUE
+numeric$X1<-FALSE
+numeric$user_name<-FALSE
+numeric$raw_timestamp_part_1<-FALSE
+numeric$raw_timestamp_part_2<-FALSE
+numeric$cvtd_timestamp<-FALSE
+numeric$num_window<-FALSE
+numericCol<-unlist(numeric)
+training3<-training2[,numericCol]
+```
+
+Step 2: build model
+```{r}
+library(caret)
+set.seed(1)
+# model 1: SVM
+# model 2: gbm
+# model 3: random forest
+modFit3<-train(classe~.,method="rf",data=training3)
+
+# compare results
+results<-resamples(list(svm=modFit1,gbm=modFit2,rf=modFit3))
+summary(results)
+bwplot(results)
+
+# predict
+pred<-predict(modFit3,testing2)
+
+# check importance of features
+importance<-varImp(modFit3,scale=FALSE)
+plot(importance)
+```
+Step 3: predict for testing set
