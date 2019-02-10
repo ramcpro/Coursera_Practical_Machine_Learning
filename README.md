@@ -13,12 +13,15 @@
 
 -----------------
 
+How I feel about building "black box" machine learning models:
+![why does it work vs. not work](https://i.pinimg.com/236x/4f/54/29/4f5429df5ea6361fa8d3f08dfcdccdf9--programmer-humor-computer-engineering.jpg)
+
 ## Overall score: 5/10
 
 ## Pros:
 1. Useful for learning about concepts & models
 
-2. Course project provides a good opportunity for hands-on practice.
+2. Course project at the end provides a good opportunity for hands-on practice.
 
 ## Cons:
 1. Slides were insufficiently prepared, some of models used for the quiz questions are not taught in the slides (e.g. SVM, bats() forecast)
