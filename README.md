@@ -14,7 +14,9 @@
 -----------------
 
 How I feel about building "black box" machine learning models:
+
 ![why does it work vs. not work](https://i.pinimg.com/236x/4f/54/29/4f5429df5ea6361fa8d3f08dfcdccdf9--programmer-humor-computer-engineering.jpg)
+
 
 ## Overall score: 5/10
 
@@ -34,8 +36,6 @@ How I feel about building "black box" machine learning models:
 * Cross Validation
 
 ## Week 2
-(This week's videos take a lot of time to go through & writing notes on.)
-
 * Caret package
 * Principal Component Analysis (PCA)
 * Regression with multiple features
@@ -51,6 +51,21 @@ How I feel about building "black box" machine learning models:
 * Unsupervised Prediction
 * Combining predictors
 * Forecasting
+
+## Course Project
+1. Models used for the coursework project: 
+  + Gradient Boosted Machine(gbm)
+  + Support Vector Machine (svmradial)
+  + Random Forest
+
+Among these 3 models, random forest has the best performance (Accuracy > 99%), so we used rf to do the prediction. 
+
+2. Performance issue with random forest model 
+
+One of the biggest challenges that I struggled with during the coursework is the amount of processing time the random forest model takes. At first, each run of the rf model would take 1-2 hours, which was not helpful since I just wanted to see if using different features would result in different accuracies! 
+
+Afterwards I looked at the course's discussion forum and found this helpful post: [Improve random forest performance](https://github.com/lgreski/datasciencectacontent/blob/master/markdown/pml-randomForestPerformance.md). This suggests a way to increase rf model performance through a combination of Cross-Validation and Parallel Processing. Applying this results in a ~70% decrease in computing time (took my mac about 25 mins to knit the html file from rmd file).
+
 
 --------------
 
@@ -834,3 +849,4 @@ fcast<-forecast(ets1)
 plot(fcast)
 lines(ts1Test,col="red")
 ```
+
